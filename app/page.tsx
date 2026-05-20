@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, FileText, ShieldCheck, Loader2 } from "lucide-react";
+import { Bot, FileText, ShieldCheck, Loader2, Download } from "lucide-react";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
@@ -15,6 +15,9 @@ export default function Home() {
   const [critiqueLog, setCritiqueLog] = useState<string[]>([]);
   // 1. Add these state variables at the top of your Home component:
   const [history, setHistory] = useState<{ id: string; title: string }[]>([]);
+  const [userApiKey, setUserApiKey] = useState("");
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState("");
 
   // 2. Add a function to load the historical thread list from our new API:
   const fetchChatHistory = async () => {
@@ -26,7 +29,20 @@ export default function Home() {
   // Load history on initial page load
   useEffect(() => {
     fetchChatHistory();
+    const storedKey = localStorage.getItem("geminiApiKey");
+    if (storedKey) {
+      setUserApiKey(storedKey);
+    } else {
+      setShowApiKeyModal(true);
+    }
   }, []);
+
+  const saveApiKey = () => {
+    if (!tempApiKey.trim()) return;
+    localStorage.setItem("geminiApiKey", tempApiKey.trim());
+    setUserApiKey(tempApiKey.trim());
+    setShowApiKeyModal(false);
+  };
 
   // 3. Add a function to handle clicking an old chat:
   const loadPastSession = async (threadId: string) => {
@@ -57,7 +73,10 @@ export default function Home() {
       // Open a connection to our streaming API
       const response = await fetch("/api/orchestrate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Gemini-API-Key": userApiKey
+        },
         body: JSON.stringify({ prompt }),
       });
 
@@ -103,6 +122,19 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const downloadReport = () => {
+    if (!draft) return;
+    const blob = new Blob([draft], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "architecture_proposal.md";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -177,9 +209,20 @@ export default function Home() {
             
             {/* Left Column: Final Document */}
             <div className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-8 min-h-[500px]">
-               <div className="flex items-center gap-2 mb-6 border-b pb-4">
-                 <FileText className="w-5 h-5 text-gray-400" />
-                 <h2 className="text-xl font-semibold text-gray-800">Architecture Proposal</h2>
+               <div className="flex items-center justify-between mb-6 border-b pb-4">
+                 <div className="flex items-center gap-2">
+                   <FileText className="w-5 h-5 text-gray-400" />
+                   <h2 className="text-xl font-semibold text-gray-800">Architecture Proposal</h2>
+                 </div>
+                 {draft && (
+                   <button 
+                     onClick={downloadReport}
+                     className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded transition"
+                   >
+                     <Download className="w-4 h-4" />
+                     Download .md
+                   </button>
+                 )}
                </div>
                {draft ? (
                   <div className="prose max-w-none text-gray-700">
@@ -218,6 +261,30 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* API Key Modal Overlay */}
+      {showApiKeyModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Welcome to Automated ML Architect</h2>
+            <p className="text-gray-500 mb-6 text-sm">Please provide your Gemini API key to start generating architectures. Your key is stored securely in your browser's local storage and is never saved on our servers.</p>
+            <input 
+              type="password"
+              value={tempApiKey}
+              onChange={(e) => setTempApiKey(e.target.value)}
+              placeholder="AIzaSy..."
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black mb-4"
+            />
+            <button 
+              onClick={saveApiKey}
+              disabled={!tempApiKey.trim()}
+              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+              Save API Key
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

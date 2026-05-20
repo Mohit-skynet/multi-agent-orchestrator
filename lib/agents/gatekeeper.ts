@@ -1,12 +1,16 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { AgentState } from "../state";
 
-export async function gatekeeperNode(state: typeof AgentState.State) {
+import { RunnableConfig } from "@langchain/core/runnables";
+
+export async function gatekeeperNode(state: typeof AgentState.State, config?: RunnableConfig) {
   console.log("--- 🚪 GATEKEEPER AGENT ACTIVATED ---");
+
+  const apiKey = config?.configurable?.geminiApiKey || process.env.GOOGLE_GENAI_API_KEY;
 
   const llm = new ChatGoogleGenerativeAI({
     model: "gemini-2.5-flash", // Fast model for quick yes/no check
-    apiKey: process.env.GOOGLE_GENAI_API_KEY,
+    apiKey: apiKey,
     temperature: 0, // Strict, factual checking
   });
 

@@ -2,25 +2,28 @@ import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { TavilySearch } from "@langchain/tavily";
 import { AgentState } from "../state";
 
-export async function researcherNode(state: typeof AgentState.State) {
-    console.log("--- 🕵️‍♂️ RESEARCHER AGENT ACTIVATED ---");
+import { RunnableConfig } from "@langchain/core/runnables";
 
-    // 1. Initialize the Search Tool
-    const searchTool = new TavilySearch({
-        maxResults: 3, // Keep it focused on the top 3 most relevant results
-        tavilyApiKey: process.env.TAVILY_API_KEY,
-    });
+export async function researcherNode(state: typeof AgentState.State, config?: RunnableConfig) {
+  console.log("--- 🕵️‍♂️ RESEARCHER AGENT ACTIVATED ---");
 
-    // 2. Fetch live data from the web based on the user's input
-    const searchQuery = `Latest architecture, MLOps, and best practices for: ${state.input}`;
-    const rawSearchResults = await searchTool.invoke({ query: searchQuery });
+  // 1. Initialize the Search Tool
+  const searchTool = new TavilySearch({
+      maxResults: 3, // Keep it focused on the top 3 most relevant results
+      tavilyApiKey: process.env.TAVILY_API_KEY,
+  });
 
-    // 3. Initialize Gemini to act as the "Synthesizer"
-    const llm = new ChatGoogleGenerativeAI({
-        model: "gemini-2.5-flash", // Flash is perfect for fast summarization
-        apiKey: process.env.GOOGLE_GENAI_API_KEY,
-        temperature: 0.2, // Low temperature for factual, grounded responses
-    });
+  // 2. Fetch live data from the web based on the user's input
+  const searchQuery = `Latest architecture, MLOps, and best practices for: ${state.input}`;
+  const rawSearchResults = await searchTool.invoke({ query: searchQuery });
+
+  // 3. Initialize Gemini to act as the "Synthesizer"
+  const apiKey = config?.configurable?.geminiApiKey || process.env.GOOGLE_GENAI_API_KEY;
+  const llm = new ChatGoogleGenerativeAI({
+      model: "gemini-2.5-flash", // Flash is perfect for fast summarization
+      apiKey: apiKey,
+      temperature: 0.2, // Low temperature for factual, grounded responses
+  });
 
     // 4. Prompt Gemini to organize the raw web data
     const prompt = `

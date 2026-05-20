@@ -11,10 +11,16 @@ export async function GET() {
     const threads = await db.collection("checkpoints").distinct("thread_id");
 
     // Format the data cleanly for our frontend sidebar
-    const historyList = threads.map((id) => ({
-      id,
-      title: id.replace(/-/g, " ").toUpperCase(), // Human-friendly naming
-    }));
+    const historyList = threads.map((id) => {
+      const parts = id.split("-");
+      if (parts.length > 1 && !isNaN(Number(parts[parts.length - 1]))) {
+        parts.pop(); // Remove the timestamp
+      }
+      return {
+        id,
+        title: parts.join(" ").toUpperCase() || id.toUpperCase(),
+      };
+    });
 
     return NextResponse.json({ historyList });
   } catch (error: any) {

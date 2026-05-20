@@ -1,12 +1,15 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { AgentState } from "../state";
+import { RunnableConfig } from "@langchain/core/runnables";
 
-export async function auditorNode(state: typeof AgentState.State) {
+export async function auditorNode(state: typeof AgentState.State, config?: RunnableConfig) {
   console.log("--- ⚖️ AUDITOR AGENT ACTIVATED ---");
+
+  const apiKey = config?.configurable?.geminiApiKey || process.env.GOOGLE_GENAI_API_KEY;
 
   const llm = new ChatGoogleGenerativeAI({
     model: "gemini-2.5-flash", //we should use pro here because it is more accurate and efficient
-    apiKey: process.env.GOOGLE_GENAI_API_KEY,
+    apiKey: apiKey,
     temperature: 0, // Very important: The Auditor must be objective and strict
   });
 

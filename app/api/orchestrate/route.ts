@@ -24,11 +24,22 @@ export async function POST(req: Request) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const config = {
+          const geminiApiKey = req.headers.get("X-Gemini-API-Key") || undefined;
+            const slug = prompt.substring(0, 30).replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+            const thread_id = `${slug}-${Date.now()}`;
+            const config = {
             configurable: {
-              thread_id:`session-${Date.now()}-${Math.floor(Math.random() * 1000)}` 
-            }
-          };
+              thread_id: thread_id,
+              geminiApiKey: geminiApiKey
+            },
+            // 👇 MLOps Tracing Upgrades
+            runName: "Architecture_Generation_Workflow",
+            tags: ["production-test", "gemini-1.5"],
+            metadata: { 
+              agent_version: "1.0.0",
+              trigger_source: "web_ui"
+              },
+            };
 
           // Pass the config object as the second argument to your graph streaming execution
           for await (const chunk of await orchestratorGraph.stream(initialState, config)) {
